@@ -1,7 +1,8 @@
 {
+  "rewrites": [{ "source": "/(.*)", "destination": "/app.py" }],
   "crons": [
     {
-      "path": "/api/check-messages",
+      "path": "/api/check-messages", 
       "schedule": "* * * * *"
     }
   ]
