@@ -46,6 +46,12 @@ python app.py
 
 프로덕션에서는 반드시 `IMAP_PASS`, `SMTP_PASS` 등을 환경 변수로 설정해 사용하세요.
 
+## Vercel Cron (메일 체크 1분마다)
+
+- 클라이언트 30초 `setInterval`은 제거되어 있습니다.
+- **vercel.json**에서 1분마다 `GET /api/check-messages`를 호출하도록 설정되어 있습니다.
+- **api/check-messages.py**: GET 요청일 때만 IMAP 메일 체크(`fetch_mails`)를 실행하고, 완료 시 `{"ok": true}`를 반환합니다. (POST 등 다른 메서드는 처리하지 않음)
+
 ## Vercel에 프론트만 배포할 때 (자동 수신 등 API 연동)
 
 프론트(HTML/JS)만 Vercel에 올리면 `/api/mails` 요청이 Vercel 쪽으로 가서 백엔드가 없어 **자동 수신(30초 폴링)·목록·답장**이 동작하지 않습니다.

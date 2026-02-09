@@ -39,7 +39,6 @@
         <h1 class="text-lg font-semibold tracking-tight">allwayz 도메인 메일 관리자</h1>
       </div>
       <div class="flex items-center gap-3">
-        <span id="auto-update-status" class="text-slate-400 text-xs hidden">자동 업데이트 중...</span>
         <button
           id="btn-refresh"
           type="button"
@@ -198,9 +197,8 @@
     const replySubject = document.getElementById('reply-subject');
     const replyBody = document.getElementById('reply-body');
     const replyStatus = document.getElementById('reply-status');
+    const toastEl = document.getElementById('toast');
 
-    const AUTO_SYNC_INTERVAL_MS = 30000;
-    const AUTO_SYNC_LIMIT = 20;
     const PER_PAGE = 20;
     var currentPage = 1;
     var totalCount = 0;
@@ -219,11 +217,6 @@
       btnRefresh.disabled = loading;
       if (loading) iconRefresh.classList.add('animate-spin');
       else iconRefresh.classList.remove('animate-spin');
-    }
-
-    function setAutoUpdateStatus(visible) {
-      if (visible) autoUpdateStatusEl.classList.remove('hidden');
-      else autoUpdateStatusEl.classList.add('hidden');
     }
 
     function showToast() {
@@ -250,15 +243,6 @@
       tr.style.cursor = 'pointer';
       tr.addEventListener('click', function () { openModal(m); });
       return tr;
-    }
-
-    function getCurrentUids() {
-      const set = new Set();
-      mailListEl.querySelectorAll('tr[data-uid]').forEach(function (tr) {
-        var u = tr.getAttribute('data-uid');
-        if (u) set.add(u);
-      });
-      return set;
     }
 
     function renderMails(mails) {
@@ -321,22 +305,6 @@
       if (page < 1 || page > totalPages) return;
       currentPage = page;
       loadMails();
-    }
-
-    function prependNewMails(newMails) {
-      if (!newMails || newMails.length === 0) return;
-      emptyStateEl.classList.add('hidden');
-      newMails.sort(function (a, b) {
-        var ua = parseInt(a.uid, 10) || 0, ub = parseInt(b.uid, 10) || 0;
-        return ub - ua;
-      });
-      var fragment = document.createDocumentFragment();
-      newMails.forEach(function (m) {
-        fragment.appendChild(createMailRow(m, true));
-      });
-      mailListEl.insertBefore(fragment, mailListEl.firstChild);
-      toastEl.textContent = '새 메일이 도착했습니다';
-      showToast();
     }
 
     function escapeHtml(s) {
@@ -507,37 +475,8 @@
       }
     }
 
-    async function loadMailsForSync() {
-      if (btnRefresh.disabled) return;
-      if (currentPage !== 1) return;
-      setAutoUpdateStatus(true);
-      try {
-        var res = await fetch(API_BASE + '/api/mails?limit=' + AUTO_SYNC_LIMIT);
-        var data = await res.json();
-        if (!res.ok || !data.ok || !data.mails || data.mails.length === 0) {
-          setAutoUpdateStatus(false);
-          return;
-        }
-        var existingUids = getCurrentUids();
-        var newMails = data.mails.filter(function (m) {
-          var uid = String(m.uid != null ? m.uid : '');
-          return uid && !existingUids.has(uid);
-        });
-        if (newMails.length > 0) {
-          prependNewMails(newMails);
-          totalCount += newMails.length;
-          renderPagination();
-        }
-      } catch (err) {
-        /* 자동 동기화 실패는 조용히 무시 */
-      } finally {
-        setAutoUpdateStatus(false);
-      }
-    }
-
     btnRefresh.addEventListener('click', function () { loadMails(1); });
     loadMails(1);
-    setInterval(loadMailsForSync, AUTO_SYNC_INTERVAL_MS);
   </script>
 </body>
 </html>
