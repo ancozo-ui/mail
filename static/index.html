@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>allwayz 도메인 메일 관리자</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; }
+    .mail-body-modal { max-height: 70vh; overflow-y: auto; }
+    .mail-body-content { white-space: pre-wrap; word-break: break-word; }
+    .gw-sidebar { min-width: 200px; }
+    @media (max-width: 768px) { .gw-sidebar { min-width: 0; } }
+    @keyframes new-mail-in {
+      0% { background-color: rgba(59, 130, 246, 0.5); }
+      100% { background-color: transparent; }
+    }
+    .mail-row-new { animation: new-mail-in 1.2s ease-out; }
+    .toast-enter { animation: toast-in 0.25s ease-out; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-neutral-100 min-h-screen text-neutral-800 flex flex-col">
+  <!-- 상단 그룹웨어 헤더 -->
+  <header class="bg-slate-800 text-white shadow flex-shrink-0">
+    <div class="flex items-center justify-between px-4 h-14">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded bg-slate-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h1 class="text-lg font-semibold tracking-tight">allwayz 도메인 메일 관리자</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="auto-update-status" class="text-slate-400 text-xs hidden">자동 업데이트 중...</span>
+        <button
+          id="btn-refresh"
+          type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded bg-slate-600 hover:bg-slate-500 text-sm font-medium transition"
+        >
+          <svg id="icon-refresh" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>새로고침</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- 좌측 사이드바 (그룹웨어 메뉴) -->
+    <aside class="gw-sidebar bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
+      <nav class="p-3 space-y-0.5">
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-100 text-slate-800 font-medium">
+          <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <span>받은메일함</span>
+        </a>
+        <div class="px-3 py-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider">allwayz</div>
+      </nav>
+    </aside>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-white m-2 rounded-lg border border-slate-200 shadow-sm">
+      <div id="status" class="hidden mx-4 mt-3"></div>
+
+      <!-- 메일 목록 테이블형 -->
+      <div class="flex-1 overflow-auto flex flex-col">
+        <table class="w-full border-collapse">
+          <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+            <tr>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase w-8"></th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">보낸 사람</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase min-w-[200px]">제목</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase w-36">날짜</th>
+            </tr>
+          </thead>
+          <tbody id="mail-list">
+            <!-- JS로 채움 -->
+          </tbody>
+        </table>
+        <div id="empty-state" class="hidden py-16 text-center text-slate-500 text-sm">
+          메일이 없습니다. 새로고침해 보세요.
+        </div>
+        <!-- 페이지네이션 -->
+        <div id="pagination" class="hidden flex-shrink-0 flex items-center justify-between gap-4 px-4 py-3 border-t border-slate-200 bg-slate-50">
+          <p id="pagination-info" class="text-sm text-slate-600"></p>
+          <nav id="pagination-nav" class="flex items-center gap-1"></nav>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 본문 모달 (그룹웨어 스타일) -->
+  <div id="modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="absolute inset-0 bg-black/50" data-close="modal"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-slate-200">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+          <h2 id="modal-subject" class="text-base font-semibold text-slate-800 truncate pr-4"></h2>
+          <button type="button" id="btn-close-modal" class="p-2 rounded hover:bg-slate-200 text-slate-600" aria-label="닫기">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="px-5 py-2 border-b border-slate-100 text-sm text-slate-600 space-y-1 bg-white">
+          <p id="modal-from"></p>
+          <p id="modal-date"></p>
+        </div>
+        <div id="modal-body-wrap" class="mail-body-modal flex-1 overflow-y-auto min-h-0 flex flex-col">
+          <iframe id="modal-body-iframe" class="hidden w-full flex-1 border-0 rounded" sandbox="allow-same-origin" title="메일 본문"></iframe>
+          <div id="modal-body-text" class="hidden px-5 py-4 mail-body-content text-slate-700 text-sm whitespace-pre-wrap break-words"></div>
+        </div>
+        <div class="flex-shrink-0 px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+          <button type="button" id="btn-reply" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-medium hover:bg-slate-600">답장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 답장 폼 모달 -->
+  <div id="reply-modal" class="fixed inset-0 z-[55] hidden" aria-modal="true">
+    <div class="absolute inset-0 bg-black/50" data-close="reply-modal"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col border border-slate-200 max-h-[90vh]">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+          <h3 class="text-base font-semibold text-slate-800">답장 보내기</h3>
+          <button type="button" id="btn-close-reply" class="p-2 rounded hover:bg-slate-200 text-slate-600" aria-label="닫기">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="px-5 py-4 space-y-3 overflow-y-auto flex-1">
+          <p class="text-xs text-slate-500">발신: op@allwayzio.com</p>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">받는 사람</label>
+            <input type="text" id="reply-to" class="w-full px-3 py-2 border border-slate-300 rounded text-sm" placeholder="이메일 주소" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">제목</label>
+            <input type="text" id="reply-subject" class="w-full px-3 py-2 border border-slate-300 rounded text-sm" placeholder="제목" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">내용</label>
+            <textarea id="reply-body" class="w-full px-3 py-2 border border-slate-300 rounded text-sm min-h-[120px]" placeholder="내용" rows="6"></textarea>
+          </div>
+          <p id="reply-status" class="text-sm hidden"></p>
+        </div>
+        <div class="flex-shrink-0 px-5 py-3 border-t border-slate-200 flex justify-end gap-2">
+          <button type="button" id="btn-cancel-reply" class="px-4 py-2 rounded border border-slate-300 text-slate-700 text-sm hover:bg-slate-50">취소</button>
+          <button type="button" id="btn-send-reply" class="px-4 py-2 rounded bg-slate-700 text-white text-sm font-medium hover:bg-slate-600">보내기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트: 새 메일 도착 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] hidden px-4 py-3 rounded-lg bg-slate-800 text-white text-sm font-medium shadow-lg toast-enter">
+    새 메일이 도착했습니다
+  </div>
+
+  <script>
+    const mailListEl = document.getElementById('mail-list');
+    const emptyStateEl = document.getElementById('empty-state');
+    const statusEl = document.getElementById('status');
+    const btnRefresh = document.getElementById('btn-refresh');
+    const iconRefresh = document.getElementById('icon-refresh');
+    const modal = document.getElementById('modal');
+    const modalSubject = document.getElementById('modal-subject');
+    const modalFrom = document.getElementById('modal-from');
+    const modalDate = document.getElementById('modal-date');
+    const modalBodyWrap = document.getElementById('modal-body-wrap');
+    const modalBodyIframe = document.getElementById('modal-body-iframe');
+    const modalBodyText = document.getElementById('modal-body-text');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const btnReply = document.getElementById('btn-reply');
+    const replyModal = document.getElementById('reply-modal');
+    const btnCloseReply = document.getElementById('btn-close-reply');
+    const btnCancelReply = document.getElementById('btn-cancel-reply');
+    const btnSendReply = document.getElementById('btn-send-reply');
+    const replyTo = document.getElementById('reply-to');
+    const replySubject = document.getElementById('reply-subject');
+    const replyBody = document.getElementById('reply-body');
+    const replyStatus = document.getElementById('reply-status');
+    var currentMail = null;
+
+    const AUTO_SYNC_INTERVAL_MS = 30000;
+    const AUTO_SYNC_LIMIT = 20;
+    const PER_PAGE = 20;
+    var currentPage = 1;
+    var totalCount = 0;
+
+    function showStatus(message, isError) {
+      statusEl.textContent = message;
+      statusEl.className = 'mx-4 mt-3 p-3 rounded ' + (isError ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600');
+      statusEl.classList.remove('hidden');
+    }
+
+    function hideStatus() {
+      statusEl.classList.add('hidden');
+    }
+
+    function setLoading(loading) {
+      btnRefresh.disabled = loading;
+      if (loading) iconRefresh.classList.add('animate-spin');
+      else iconRefresh.classList.remove('animate-spin');
+    }
+
+    function setAutoUpdateStatus(visible) {
+      if (visible) autoUpdateStatusEl.classList.remove('hidden');
+      else autoUpdateStatusEl.classList.add('hidden');
+    }
+
+    function showToast() {
+      toastEl.classList.remove('hidden');
+      clearTimeout(toastEl._tid);
+      toastEl._tid = setTimeout(function () {
+        toastEl.classList.add('hidden');
+      }, 2500);
+    }
+
+    function createMailRow(m, isNew) {
+      const isUnread = !m.seen;
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-uid', String(m.uid != null ? m.uid : ''));
+      tr.className = 'border-b border-slate-100 hover:bg-slate-50 ' + (isUnread ? 'bg-blue-50/50' : '');
+      if (isNew) tr.classList.add('mail-row-new');
+      tr.innerHTML =
+        '<td class="py-2.5 px-4">' +
+        (isUnread ? '<span class="inline-block w-2 h-2 rounded-full bg-blue-600" title="안 읽음"></span>' : '') +
+        '</td>' +
+        '<td class="py-2.5 px-4 text-sm text-slate-600 max-w-[180px] truncate">' + escapeHtml(m.from || '-') + '</td>' +
+        '<td class="py-2.5 px-4"><span class="font-medium text-slate-800 ' + (isUnread ? 'font-semibold' : '') + '">' + escapeHtml(m.subject || '(제목 없음)') + '</span></td>' +
+        '<td class="py-2.5 px-4 text-xs text-slate-500">' + escapeHtml(m.date || '') + '</td>';
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', function () { openModal(m); });
+      return tr;
+    }
+
+    function getCurrentUids() {
+      const set = new Set();
+      mailListEl.querySelectorAll('tr[data-uid]').forEach(function (tr) {
+        var u = tr.getAttribute('data-uid');
+        if (u) set.add(u);
+      });
+      return set;
+    }
+
+    function renderMails(mails) {
+      mailListEl.innerHTML = '';
+      if (!mails || mails.length === 0) {
+        emptyStateEl.classList.remove('hidden');
+        document.getElementById('pagination').classList.add('hidden');
+        return;
+      }
+      emptyStateEl.classList.add('hidden');
+      mails.forEach(function (m) {
+        mailListEl.appendChild(createMailRow(m, false));
+      });
+      renderPagination();
+    }
+
+    function renderPagination() {
+      var paginationEl = document.getElementById('pagination');
+      var infoEl = document.getElementById('pagination-info');
+      var navEl = document.getElementById('pagination-nav');
+      if (totalCount <= 0) {
+        paginationEl.classList.add('hidden');
+        return;
+      }
+      paginationEl.classList.remove('hidden');
+      var totalPages = Math.ceil(totalCount / PER_PAGE) || 1;
+      var start = (currentPage - 1) * PER_PAGE + 1;
+      var rowCount = mailListEl.querySelectorAll('tr[data-uid]').length;
+      var end = currentPage === 1 ? Math.min(start + rowCount - 1, totalCount) : Math.min(currentPage * PER_PAGE, totalCount);
+      infoEl.textContent = '전체 ' + totalCount + '건 중 ' + start + '-' + end + '번째';
+      navEl.innerHTML = '';
+      var addBtn = function (label, pageNum, disabled) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-3 py-1.5 rounded text-sm font-medium ' + (disabled ? 'text-slate-400 cursor-default' : 'text-slate-700 hover:bg-slate-200');
+        btn.textContent = label;
+        if (!disabled && pageNum >= 1 && pageNum <= totalPages) {
+          btn.addEventListener('click', function () { goToPage(pageNum); });
+        }
+        navEl.appendChild(btn);
+      };
+      addBtn('이전', currentPage - 1, currentPage <= 1);
+      var from = Math.max(1, currentPage - 2);
+      var to = Math.min(totalPages, currentPage + 2);
+      for (var p = from; p <= to; p++) {
+        (function (pn) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'min-w-[2rem] py-1.5 rounded text-sm font-medium ' + (pn === currentPage ? 'bg-slate-700 text-white' : 'text-slate-700 hover:bg-slate-200');
+          b.textContent = pn;
+          b.addEventListener('click', function () { goToPage(pn); });
+          navEl.appendChild(b);
+        })(p);
+      }
+      addBtn('다음', currentPage + 1, currentPage >= totalPages);
+    }
+
+    function goToPage(page) {
+      var totalPages = Math.ceil(totalCount / PER_PAGE) || 1;
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      loadMails();
+    }
+
+    function prependNewMails(newMails) {
+      if (!newMails || newMails.length === 0) return;
+      emptyStateEl.classList.add('hidden');
+      newMails.sort(function (a, b) {
+        var ua = parseInt(a.uid, 10) || 0, ub = parseInt(b.uid, 10) || 0;
+        return ub - ua;
+      });
+      var fragment = document.createDocumentFragment();
+      newMails.forEach(function (m) {
+        fragment.appendChild(createMailRow(m, true));
+      });
+      mailListEl.insertBefore(fragment, mailListEl.firstChild);
+      toastEl.textContent = '새 메일이 도착했습니다';
+      showToast();
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function isHtmlContent(s) {
+      if (!s || typeof s !== 'string') return false;
+      var t = s.trim();
+      return t.indexOf('<!') === 0 || t.indexOf('<html') === 0 || (t.indexOf('<') === 0 && t.indexOf('</') > 0);
+    }
+
+    function setRowAsRead(uid) {
+      var uidStr = String(uid != null ? uid : '');
+      mailListEl.querySelectorAll('tr[data-uid]').forEach(function (tr) {
+        if (tr.getAttribute('data-uid') !== uidStr) return;
+        tr.classList.remove('bg-blue-50/50');
+        var firstTd = tr.cells[0];
+        if (firstTd) firstTd.innerHTML = '';
+        var subjectSpan = tr.querySelector('td:nth-child(3) span');
+        if (subjectSpan) subjectSpan.classList.remove('font-semibold');
+      });
+    }
+
+    function extractEmail(fromStr) {
+      if (!fromStr) return '';
+      var match = fromStr.match(/<([^>]+)>/);
+      if (match) return match[1].trim();
+      if (fromStr.indexOf('@') >= 0) return fromStr.trim();
+      return '';
+    }
+
+    function openModal(m) {
+      currentMail = m;
+      modalSubject.textContent = m.subject || '(제목 없음)';
+      modalFrom.textContent = '보낸 사람: ' + (m.from || '-');
+      modalDate.textContent = '날짜: ' + (m.date || '-');
+      var body = m.body || '(본문 없음)';
+      modalBodyIframe.classList.add('hidden');
+      modalBodyText.classList.add('hidden');
+      if (isHtmlContent(body)) {
+        var doc = modalBodyIframe.contentDocument || modalBodyIframe.contentWindow.document;
+        doc.open();
+        var trimmed = body.trim().toLowerCase();
+        if (trimmed.indexOf('<!doctype') === 0 || trimmed.indexOf('<html') === 0) {
+          doc.write(body);
+        } else {
+          doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:12px;font-family:inherit;}</style></head><body>' + body + '</body></html>');
+        }
+        doc.close();
+        modalBodyIframe.classList.remove('hidden');
+      } else {
+        modalBodyText.textContent = body;
+        modalBodyText.classList.remove('hidden');
+      }
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      if (!m.seen && m.uid) {
+        fetch('/api/mails/' + encodeURIComponent(String(m.uid)) + '/read', { method: 'POST' })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.ok) {
+              m.seen = true;
+              setRowAsRead(m.uid);
+            }
+          })
+          .catch(function () {});
+      }
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    btnCloseModal.addEventListener('click', closeModal);
+    modal.querySelector('[data-close="modal"]').addEventListener('click', closeModal);
+    modal.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+    function openReplyForm() {
+      if (!currentMail) return;
+      replyTo.value = extractEmail(currentMail.from);
+      var subj = currentMail.subject || '';
+      replySubject.value = (subj.indexOf('Re:') === 0 ? subj : 'Re: ' + subj).trim();
+      var origBody = (currentMail.body || '').replace(/\r\n/g, '\n');
+      replyBody.value = '\n\n' + 'On ' + (currentMail.date || '') + ' ' + (currentMail.from || '') + ' wrote:\n' + origBody.split('\n').map(function (l) { return '> ' + l; }).join('\n');
+      replyStatus.classList.add('hidden');
+      replyStatus.textContent = '';
+      replyModal.classList.remove('hidden');
+    }
+
+    function closeReplyForm() {
+      replyModal.classList.add('hidden');
+    }
+
+    btnReply.addEventListener('click', openReplyForm);
+    btnCloseReply.addEventListener('click', closeReplyForm);
+    btnCancelReply.addEventListener('click', closeReplyForm);
+    replyModal.querySelector('[data-close="reply-modal"]').addEventListener('click', closeReplyForm);
+    replyModal.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeReplyForm(); });
+
+    btnSendReply.addEventListener('click', function () {
+      var to = replyTo.value.trim();
+      var subject = replySubject.value.trim();
+      var body = replyBody.value.trim();
+      if (!to) {
+        replyStatus.textContent = '받는 사람을 입력하세요.';
+        replyStatus.classList.remove('hidden');
+        replyStatus.className = 'text-sm text-red-600';
+        return;
+      }
+      btnSendReply.disabled = true;
+      replyStatus.classList.add('hidden');
+      fetch('/api/send-mail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: to, subject: subject, body: body })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          btnSendReply.disabled = false;
+          if (data && data.ok) {
+            closeReplyForm();
+            toastEl.textContent = '메일을 보냈습니다.';
+            showToast();
+          } else {
+            replyStatus.textContent = data && data.error ? data.error : '발송 실패';
+            replyStatus.classList.remove('hidden');
+            replyStatus.className = 'text-sm text-red-600';
+          }
+        })
+        .catch(function (err) {
+          btnSendReply.disabled = false;
+          replyStatus.textContent = '연결 실패: ' + (err.message || '');
+          replyStatus.classList.remove('hidden');
+          replyStatus.className = 'text-sm text-red-600';
+        });
+    });
+
+    async function loadMails(page) {
+      if (page != null) currentPage = page;
+      hideStatus();
+      setLoading(true);
+      try {
+        var url = '/api/mails?page=' + currentPage + '&per_page=' + PER_PAGE;
+        var res = await fetch(url);
+        var data = await res.json();
+        if (!res.ok) {
+          showStatus('오류: ' + (data.error || res.statusText), true);
+          renderMails([]);
+          return;
+        }
+        if (!data.ok) {
+          showStatus('오류: ' + (data.error || '알 수 없음'), true);
+          renderMails([]);
+          return;
+        }
+        totalCount = data.total != null ? data.total : (data.mails || []).length;
+        renderMails(data.mails || []);
+      } catch (err) {
+        showStatus('연결 실패: ' + err.message, true);
+        renderMails([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loadMailsForSync() {
+      if (btnRefresh.disabled) return;
+      if (currentPage !== 1) return;
+      setAutoUpdateStatus(true);
+      try {
+        var res = await fetch('/api/mails?limit=' + AUTO_SYNC_LIMIT);
+        var data = await res.json();
+        if (!res.ok || !data.ok || !data.mails || data.mails.length === 0) {
+          setAutoUpdateStatus(false);
+          return;
+        }
+        var existingUids = getCurrentUids();
+        var newMails = data.mails.filter(function (m) {
+          var uid = String(m.uid != null ? m.uid : '');
+          return uid && !existingUids.has(uid);
+        });
+        if (newMails.length > 0) {
+          prependNewMails(newMails);
+          totalCount += newMails.length;
+          renderPagination();
+        }
+      } catch (err) {
+        /* 자동 동기화 실패는 조용히 무시 */
+      } finally {
+        setAutoUpdateStatus(false);
+      }
+    }
+
+    btnRefresh.addEventListener('click', function () { loadMails(1); });
+    loadMails(1);
+    setInterval(loadMailsForSync, AUTO_SYNC_INTERVAL_MS);
+  </script>
+</body>
+</html>
