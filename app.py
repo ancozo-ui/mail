@@ -70,6 +70,18 @@ def api_send_mail():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route("/api/check-messages", methods=["GET"])
+@app.route("/api/check_messages", methods=["GET"])
+def api_check_messages():
+    """Cron용: GET일 때만 메일 체크(fetch_mails), 성공 시 { ok: true }."""
+    try:
+        fetch_mails(include_read=True, limit=20)
+        return jsonify({"ok": True})
+    except Exception as e:
+        logger.exception("api_check_messages error: %s", e)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route("/api/mails/<uid>/read", methods=["POST"])
 def api_mark_read(uid):
     """메일을 읽음 처리합니다. 모달에서 열었을 때 호출."""

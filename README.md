@@ -46,11 +46,12 @@ python app.py
 
 프로덕션에서는 반드시 `IMAP_PASS`, `SMTP_PASS` 등을 환경 변수로 설정해 사용하세요.
 
-## Vercel Cron (메일 체크 1분마다)
+## Vercel Cron (메일 체크 1분마다, Python)
 
 - 클라이언트 30초 `setInterval`은 제거되어 있습니다.
-- **vercel.json**에서 1분마다 `GET /api/check-messages`를 호출하도록 설정되어 있습니다.
-- **api/check-messages.py**: GET 요청일 때만 IMAP 메일 체크(`fetch_mails`)를 실행하고, 완료 시 `{"ok": true}`를 반환합니다. (POST 등 다른 메서드는 처리하지 않음)
+- **vercel.json**: 파이썬 런타임(`functions["api/check_messages.py"].runtime: python3.9`)과 1분마다 `GET /api/check_messages` 크론 설정.
+- **api/check_messages.py**: Vercel Python 규칙(파일명 언더스코어 → 경로 `/api/check_messages`). GET 요청일 때만 IMAP 메일 체크(`fetch_mails`) 실행, 완료 시 `{"ok": true}` 반환.
+- Flask **app.py**에도 `GET /api/check-messages`, `GET /api/check_messages` 라우트가 있어 로컬·다른 호스팅에서도 동일 URL로 호출 가능합니다.
 
 ## Vercel에 프론트만 배포할 때 (자동 수신 등 API 연동)
 

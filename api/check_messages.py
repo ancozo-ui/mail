@@ -1,4 +1,5 @@
-# Vercel Serverless: GET /api/check-messages (Cron 1분마다 호출)
+# Vercel Serverless: GET /api/check_messages (Cron 1분마다 호출)
+# 파이썬 파일명 규칙(언더스코어) → 경로 /api/check_messages
 # GET 요청일 때만 메일 체크 실행, 완료 시 성공 응답
 import json
 import os
