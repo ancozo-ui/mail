@@ -45,3 +45,28 @@ python app.py
 **답장 기능**: 메일 읽기 모달에서 "답장" 버튼을 누르면 **hhcho@surff.kr** 계정으로 발송됩니다. `SMTP_PASS`를 반드시 설정해야 합니다. Gmail이면 앱 비밀번호 사용을 권장합니다.
 
 프로덕션에서는 반드시 `IMAP_PASS`, `SMTP_PASS` 등을 환경 변수로 설정해 사용하세요.
+
+## Vercel에 프론트만 배포할 때 (자동 수신 등 API 연동)
+
+프론트(HTML/JS)만 Vercel에 올리면 `/api/mails` 요청이 Vercel 쪽으로 가서 백엔드가 없어 **자동 수신(30초 폴링)·목록·답장**이 동작하지 않습니다.
+
+**방법 1 – 백엔드 URL 지정**
+
+1. Flask 백엔드는 **Railway, Render, Fly.io** 등 다른 서비스에 배포합니다.
+2. `static/index.html`의 `<head>` 안에 아래 한 줄을 넣습니다 (백엔드 주소만 본인 걸로 바꿈).
+
+   ```html
+   <meta name="mail-api-base" content="https://your-backend.railway.app">
+   ```
+
+3. Vercel에 다시 배포하면, 자동 수신·목록·답장 요청이 모두 위 백엔드로 갑니다.
+
+**방법 2 – 스크립트로 지정**
+
+`index.html`의 `<script>` 바로 위에 추가:
+
+```html
+<script>window.MAIL_API_BASE = 'https://your-backend.railway.app';</script>
+```
+
+백엔드 서버에서는 **CORS**가 허용돼 있어야 합니다. (`app.py`에 `CORS(app)` 있음)

@@ -168,6 +168,14 @@
   </div>
 
   <script>
+    // Vercel 등 프론트만 배포 시: 백엔드 URL 지정. 같은 도메인이면 비워두면 됨.
+    // 예: <meta name="mail-api-base" content="https://your-backend.railway.app">
+    var API_BASE = (function () {
+      var m = document.querySelector('meta[name="mail-api-base"]');
+      return (m && m.getAttribute('content')) || (window.MAIL_API_BASE || '');
+    })();
+    var currentMail = null;
+
     const mailListEl = document.getElementById('mail-list');
     const emptyStateEl = document.getElementById('empty-state');
     const statusEl = document.getElementById('status');
@@ -190,7 +198,6 @@
     const replySubject = document.getElementById('reply-subject');
     const replyBody = document.getElementById('reply-body');
     const replyStatus = document.getElementById('reply-status');
-    var currentMail = null;
 
     const AUTO_SYNC_INTERVAL_MS = 30000;
     const AUTO_SYNC_LIMIT = 20;
@@ -391,7 +398,7 @@
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       if (!m.seen && m.uid) {
-        fetch('/api/mails/' + encodeURIComponent(String(m.uid)) + '/read', { method: 'POST' })
+        fetch(API_BASE + '/api/mails/' + encodeURIComponent(String(m.uid)) + '/read', { method: 'POST' })
           .then(function (r) { return r.json(); })
           .then(function (data) {
             if (data && data.ok) {
@@ -446,7 +453,7 @@
       }
       btnSendReply.disabled = true;
       replyStatus.classList.add('hidden');
-      fetch('/api/send-mail', {
+      fetch(API_BASE + '/api/send-mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: to, subject: subject, body: body })
@@ -477,7 +484,7 @@
       hideStatus();
       setLoading(true);
       try {
-        var url = '/api/mails?page=' + currentPage + '&per_page=' + PER_PAGE;
+        var url = API_BASE + '/api/mails?page=' + currentPage + '&per_page=' + PER_PAGE;
         var res = await fetch(url);
         var data = await res.json();
         if (!res.ok) {
@@ -505,7 +512,7 @@
       if (currentPage !== 1) return;
       setAutoUpdateStatus(true);
       try {
-        var res = await fetch('/api/mails?limit=' + AUTO_SYNC_LIMIT);
+        var res = await fetch(API_BASE + '/api/mails?limit=' + AUTO_SYNC_LIMIT);
         var data = await res.json();
         if (!res.ok || !data.ok || !data.mails || data.mails.length === 0) {
           setAutoUpdateStatus(false);
