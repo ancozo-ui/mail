@@ -1,6 +1,5 @@
-# Vercel Serverless: GET /api/check_messages (Cron 1분마다 호출)
-# 파이썬 파일명 규칙(언더스코어) → 경로 /api/check_messages
-# GET 요청일 때만 메일 체크 실행, 완료 시 성공 응답
+# Vercel Serverless Function: /api/check-messages (Cron 1분마다 호출)
+# 파일명: check_messages.py → 경로: /api/check-messages
 import json
 import os
 import sys
@@ -15,10 +14,25 @@ from http.server import BaseHTTPRequestHandler
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # CRON_SECRET 인증 (선택사항이지만 보안을 위해 권장)
+        cron_secret = os.environ.get("CRON_SECRET")
+        if cron_secret:
+            auth_header = self.headers.get("Authorization", "")
+            if auth_header != f"Bearer {cron_secret}":
+                body = json.dumps({"ok": False, "error": "Unauthorized"}).encode("utf-8")
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+
         try:
             from imap_client import fetch_mails
 
+            # 메일 체크 실행
             fetch_mails(include_read=True, limit=20)
+            
             body = json.dumps({"ok": True}).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
